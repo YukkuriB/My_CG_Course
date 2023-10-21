@@ -4,22 +4,13 @@
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtc/type_ptr.hpp>
+#include"VAO.h"
+#include"VBO.h"
+#include"EBO.h"
+#include "shaderClass.h"
 
-// Vertex Shader source code 这一段是复制来的，暂时不知道是什么意思
-const char* vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"uniform mat4 rotationMatrix;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = rotationMatrix * vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"}\0";
-//Fragment Shader source code
-const char* fragmentShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vec4(0.8f, 0.3f, 0.02f, 1.0f);\n"
-"}\n\0";
+
+
 
 
 int main()
@@ -67,50 +58,19 @@ int main()
 	// 创建视图并以特定颜色刷新缓冲区
 	glViewport(0, 0, 800, 800);
 
-	//顶点着色器
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	//这里打印id以便查看
-	printf("Vertex Shader ID: %u\n", vertexShader);
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	glCompileShader(vertexShader);
-	//片段着色器
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	printf("Fragment Shader ID: %u\n", fragmentShader);
-	glShaderSource(fragmentShader, 1, & fragmentShaderSource, NULL);
-	glCompileShader(fragmentShader);
-	// 创建shader程序并添加shader
-	GLuint shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	// 删除shader因为已经组建完成
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
-
-	GLuint VAO, VBO, EBO;
-	//创建VAO和VBO对象
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	Shader shaderProgram("default.vert", "default.frag");
 
 
+	VAO VAO1;
+	VAO1.Bind();
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	VBO VBO1(vertices, sizeof(vertices));
+	EBO EBO1(indices, sizeof(indices));
 
+	VAO1.LinkVBO(VBO1, 0);
+	VAO1.Unbind();
+	VBO1.Unbind();
+	EBO1.Unbind();
 
 	glfwSwapBuffers(window);
 
@@ -126,21 +86,22 @@ int main()
 		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glUseProgram(shaderProgram);
-		GLuint rotationLoc = glGetUniformLocation(shaderProgram, "rotationMatrix");
+		shaderProgram.Activate();
+		//下面是关于旋转的自加程序
+		GLuint rotationLoc = glGetUniformLocation(shaderProgram.ID, "rotationMatrix");
 		glUniformMatrix4fv(rotationLoc, 1, GL_FALSE, glm::value_ptr(rotation));
 
-		glBindVertexArray(VAO);
+		VAO1.Bind();
 		glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, & VBO);
-	glDeleteBuffers(1, &EBO);
-	glDeleteProgram(shaderProgram);
+	VAO1.Delete();
+	VBO1.Delete();
+	EBO1.Delete();
+	shaderProgram.Delete();
 
 	glfwDestroyWindow(window);
 
