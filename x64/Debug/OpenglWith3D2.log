@@ -1,3 +1,2 @@
-﻿  Main.cpp
-C:\Users\WIN10\source\repos\OpenglWith3D2\Main.cpp(82,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+﻿  shaderClass.cpp
   OpenglWith3D2.vcxproj -> C:\Users\WIN10\source\repos\OpenglWith3D2\x64\Debug\OpenglWith3D2.exe
