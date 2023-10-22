@@ -81,41 +81,10 @@ int main()
 	GLuint uniID = glGetUniformLocation(shaderProgram.ID, "scale");
 
 	// ——————————————————————————————贴图部分——————————————————————————————————
-	int widthImg, heightImg, numColCh;
-	stbi_set_flip_vertically_on_load(true);
-	unsigned char* bytes = stbi_load("pop_cat.png", &widthImg, &heightImg, &numColCh, 0);
-	if (!bytes) {
-		std::cerr << "加载纹理失败。" << std::endl;
-		return -1;
-	}
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	//看看有多少槽位
-	GLint maxUnits;
-	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxUnits);
-	printf("Max texture units: %d\n", maxUnits);
-	//贴图的过滤方式
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	Texture popCat("pop_cat.png", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
+	popCat.texUnit(shaderProgram, "tex0", 0);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	//float flatColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
-	//glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, flatColor);
-
-	glfwSwapBuffers(window);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, widthImg, heightImg, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	//删除贴图
-	stbi_image_free(bytes);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	GLuint tex0Uni = glGetUniformLocation(shaderProgram.ID, "tex0");
-	shaderProgram.Activate();
-	glUniform1i(tex0Uni, 0);
 	//等需要关闭窗口再关闭窗口
 	while (!glfwWindowShouldClose(window))
 	{
@@ -129,7 +98,7 @@ int main()
 		shaderProgram.Activate();
 
 		glUniform1f(uniID, 0.5f);
-		glBindTexture(GL_TEXTURE_2D, texture);
+		popCat.Bind();
 		//下面是关于旋转的自加程序
 		GLuint rotationLoc = glGetUniformLocation(shaderProgram.ID, "rotationMatrix");
 		glUniformMatrix4fv(rotationLoc, 1, GL_FALSE, glm::value_ptr(rotation));
@@ -144,7 +113,7 @@ int main()
 	VAO1.Delete();
 	VBO1.Delete();
 	EBO1.Delete();
-	glDeleteTextures(1, &texture);
+	popCat.Delete();
 	shaderProgram.Delete();
 
 	glfwDestroyWindow(window);
