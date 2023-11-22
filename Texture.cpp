@@ -1,22 +1,23 @@
 #include"Texture.h"
 
-Texture::Texture(const char* image, GLenum texType, GLenum slot, GLenum format, GLenum pixelType)
+Texture::Texture(const char* image, GLenum texType, GLuint slot, GLenum format, GLenum pixelType)
 {
 	type = texType;
 	int widthImg, heightImg, numColch;
 	stbi_set_flip_vertically_on_load(true);
-	unsigned char* bytes = stbi_load("pop_cat.png", &widthImg, &heightImg, &numColch, 0);
+	unsigned char* bytes = stbi_load(image, &widthImg, &heightImg, &numColch, 0);
 
 	GLuint texture;
 	glGenTextures(1, &ID);
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE0 + slot);
+	unit = slot;
 	glBindTexture(texType, ID);
 
 	glTexParameteri(texType, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(texType, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	
-	glTexParameteri(texType, GL_TEXTURE_WRAP_S, GL_NEAREST);
-	glTexParameteri(texType, GL_TEXTURE_WRAP_T, GL_NEAREST);
+	glTexParameteri(texType, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(texType, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	// float flatColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
 	// glTexParameterfv(GL_TEXTURE_2D, GL_TEUXURE_BORDER_COLOR, flatColor);
@@ -30,13 +31,14 @@ Texture::Texture(const char* image, GLenum texType, GLenum slot, GLenum format, 
 
 void Texture::texUnit(Shader& shader, const char* uniform, GLuint unit)
 {
-	GLuint texUni = glGetUniformLocation(shader.ID, "tex0");
+	GLuint texUni = glGetUniformLocation(shader.ID, uniform);
 	shader.Activate();
 	glUniform1i(texUni, unit);
 }
 
 void Texture::Bind()
 {
+	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(type, ID);
 }
 
