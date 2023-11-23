@@ -22,7 +22,7 @@ int main()
 
 	const unsigned int width = 2160;
 	const unsigned int height = 2160;
-
+	//所绘制物体的信息
 	Vertex vertices[] =
 	{ //     COORDINATES     /        COLORS          /    TexCoord   /        NORMALS       //
 	Vertex{glm::vec3(-1.0f, 0.0f,  1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
@@ -109,7 +109,7 @@ int main()
 		glm::vec3 lightPos = glm::vec3(0.5f, 0.5f, 0.5f);
 		glm::mat4 lightModel = glm::mat4(1.0f);
 		lightModel = glm::translate(lightModel, lightPos);
-
+		//这段上个版本金字塔用的
 		glm::vec3 pyramidPos = glm::vec3(0.0f, 0.0f, 0.0f);
 		glm::mat4 pyramidModel = glm::mat4(1.0f);
 		pyramidModel = glm::translate(pyramidModel, pyramidPos);

@@ -1,5 +1,2 @@
 ﻿  Main.cpp
-  Texture.cpp
-C:\Users\WIN10\source\repos\OpenglWith3D2\Texture.cpp(10,9): warning C4101: 'texture': unreferenced local variable
-  Generating Code...
   OpenglWith3D2.vcxproj -> C:\Users\WIN10\source\repos\OpenglWith3D2\x64\Debug\OpenglWith3D2.exe

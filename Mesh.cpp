@@ -7,10 +7,11 @@ Mesh::Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::v
 	Mesh::textures = textures;
 
 	VAO.Bind();
-
+	//生成顶点缓存物件，连接到vertices
 	VBO VBO(vertices);
+	//生成EBO连接到索引
 	EBO EBO(indices);
-
+	//连接VBO到VAO
 	VAO.LinkAttrib(VBO, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
 	VAO.LinkAttrib(VBO, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
 	VAO.LinkAttrib(VBO, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
@@ -28,7 +29,6 @@ void Mesh::Draw(Shader& shader, Camera& camera)
 
 	unsigned int numDiffuse = 0;
 	unsigned int numSpecular = 0;
-
 	for (unsigned int i = 0; i < textures.size(); i++)
 	{
 		std::string num;
@@ -36,7 +36,6 @@ void Mesh::Draw(Shader& shader, Camera& camera)
 		if (type == "diffuse")
 		{
 			num = std::to_string(numDiffuse++);
-
 		}
 		else if (type == "specular")
 		{
