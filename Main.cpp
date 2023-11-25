@@ -64,7 +64,8 @@ int main()
 
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
 
-	Model model("models/sword/scene.gltf");
+	Model model("models/trees/scene.gltf");
+	
 
 	//运行主函数
 	while (!glfwWindowShouldClose(window))
