@@ -54,7 +54,7 @@ int main()
 	
 		
 		shaderProgram.Activate();
-		glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
+		
 		glUniform4f(glGetUniformLocation(shaderProgram.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
 		glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
 	// ！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！薮夕何蛍！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
@@ -64,9 +64,10 @@ int main()
 
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
 
-	Model model("models/trees/scene.gltf");
+	Model model1("models/trees/scene.gltf");
+	Model model2("models/ground/scene.gltf");
+	Model model3("models/sword/scene.gltf");
 	
-
 	//塰佩麼痕方
 	while (!glfwWindowShouldClose(window))
 	{
@@ -77,8 +78,9 @@ int main()
 		camera.Inputs(window);
 		camera.updateMatrix(45.0f, 0.1f, 100.0f);
 
-		model.Draw(shaderProgram, camera);
-
+		model1.Draw(shaderProgram, camera);
+		model2.Draw(shaderProgram, camera);
+		model3.Draw(shaderProgram, camera);
 
 
 		GLenum err;
