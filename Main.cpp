@@ -23,7 +23,18 @@ int main()
 	const unsigned int width = 2160;
 	const unsigned int height = 2160;
 
+	float rectalgleVertices[] = 
+	{
+		//Coords // texCoords
+		 1.0f, -1.0f, 1.0f, 0.0f,
+		-1.0f, -1.0f, 0.0f, 0.0f,
+		-1.0f,  1.0f, 0.0f, 1.0f,
 
+		 1.0f,  1.0f, 1.0f, 1.0f,
+		 1.0f, -1.0f, 1.0f, 0.0f,
+		-1.0f,  1.0f, 0.0f, 1.0f,
+
+	};
 	// 创建窗口，如果窗口出问题就以failed结束
 
 	GLFWwindow* window = glfwCreateWindow(width, height, "HelloWorld", NULL, NULL);
@@ -34,6 +45,7 @@ int main()
 		return -1;
 	}
 
+
 	// 告诉glsl需要使用窗口
 	glfwMakeContextCurrent(window);
 
@@ -43,9 +55,12 @@ int main()
 	glViewport(0, 0, width, height);
 
 	
+	
 	//生成shader
 	Shader shaderProgram("default.vert", "default.frag");
-	Shader outliningProgram("outlining.vert", "outlining.frag");
+	//Shader outliningProgram("outlining.vert", "outlining.frag");
+	Shader grassProgram("default.vert", "grass.frag");
+	Shader framebufferProgram("framebuffer.vert", "framebuffer.frag");
 	//生成光源
 	glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 lightPos = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -55,10 +70,14 @@ int main()
 	
 	//激活光源shader	
 		shaderProgram.Activate();
-		
 		glUniform4f(glGetUniformLocation(shaderProgram.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
 		glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
-	// ——————————————————————————————贴图部分——————————————————————————————————
+	
+		grassProgram.Activate();
+		glUniform4f(glGetUniformLocation(grassProgram.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+		glUniform3f(glGetUniformLocation(grassProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
+		glUniform1i(glGetUniformLocation(framebufferProgram.ID, "screenTexture"), 0);
+		// ——————————————————————————————贴图部分——————————————————————————————————
   
 
 	glEnable(GL_DEPTH_TEST);
@@ -73,7 +92,20 @@ int main()
 
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
 	//模型载入位置
-	Model model1("models/crow/scene.gltf");
+	Model grass("models/grass/scene.gltf");
+	Model ground("models/ground/scene.gltf");
+
+	unsigned int rectVAO, rectVBO;
+	glGenVertexArrays(1, &rectVAO);
+	glGenBuffers(1, &rectVBO);
+	glBindVertexArray(rectVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(rectalgleVertices), &rectalgleVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
 	//fps计数器
 	double prevTime = 0.0;
 	double crntTime = 0.0;
@@ -83,62 +115,96 @@ int main()
 	//垂直同步开关
 	//glfwSwapInterval(0);
 
+	unsigned int FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	//后处理段落
+	unsigned int framebufferTexture;
+	glGenTextures(1, &framebufferTexture);
+	glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebufferTexture, 0);
 
-	
+	unsigned int RBO;
+	glGenRenderbuffers(1, &RBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+	{
+		std::cout <<"Framebuffer error: " << fboStatus << std::endl;
+
+	}
 	//运行主函数
 	while (!glfwWindowShouldClose(window))
 	{
+		// Updates counter and times
 		crntTime = glfwGetTime();
 		timeDiff = crntTime - prevTime;
 		counter++;
+
 		if (timeDiff >= 1.0 / 30.0)
 		{
+			// Creates new title
 			std::string FPS = std::to_string((1.0 / timeDiff) * counter);
 			std::string ms = std::to_string((timeDiff / counter) * 1000);
-			std::string newTitle = "TestFps - " + FPS + "FPS / " + ms + "ms";
+			std::string newTitle = "YoutubeOpenGL - " + FPS + "FPS / " + ms + "ms";
 			glfwSetWindowTitle(window, newTitle.c_str());
+
+			// Resets times and counter
 			prevTime = crntTime;
 			counter = 0;
-			//启用操作与帧同步
+
+			// Use this if you have disabled VSync
 			//camera.Inputs(window);
 		}
 
-		//背景颜色设置
+
+		// Bind the custom framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+		// Specify the color of the background
 		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-		//不启用操作与帧同步
+		// Clean the back buffer and depth buffer
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// Enable depth testing since it's disabled when drawing the framebuffer rectangle
+		glEnable(GL_DEPTH_TEST);
+
+		// Handles camera inputs (delete this if you have disabled VSync)
 		camera.Inputs(window);
+		// Updates and exports the camera matrix to the Vertex Shader
 		camera.updateMatrix(45.0f, 0.1f, 100.0f);
 
-		//模型绘制部分
-		glStencilFunc(GL_ALWAYS, 1, 0xFF);
-		glStencilMask(0xFF);
-		model1.Draw(shaderProgram, camera);
 
-		//以下是关于外描边的实验代码
+		// Draw the normal model
+		grass.Draw(shaderProgram, camera);
 
-		//glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-		//glStencilMask(0x00);
-		//glDisable(GL_DEPTH_TEST);
-		//outliningProgram.Activate();
-		//glUniform1f(glGetUniformLocation(outliningProgram.ID, "outlining"), 0.5f);
-		//model1.Draw(outliningProgram, camera);
-		//glStencilMask(0xFF);
-		//glStencilFunc(GL_ALWAYS, 0, 0xFF);
-		//glEnable(GL_DEPTH_TEST);
 
-		GLenum err;
-		while ((err = glGetError()) != GL_NO_ERROR)
-		{
-			std::cerr << "OpenGL error: " << err << std::endl;
-		}
+		// Bind the default framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		// Draw the framebuffer rectangle
+		framebufferProgram.Activate();
+		glBindVertexArray(rectVAO);
+		glDisable(GL_DEPTH_TEST); // prevents framebuffer rectangle from being discarded
+		glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
+
+		// Swap the back buffer with the front buffer
 		glfwSwapBuffers(window);
+		// Take care of all GLFW events
 		glfwPollEvents();
 	}
 
 
+
 	shaderProgram.Delete();
+	grassProgram.Delete();
 	glfwDestroyWindow(window);
 
 	glfwTerminate();

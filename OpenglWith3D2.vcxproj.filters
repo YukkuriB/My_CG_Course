@@ -77,6 +77,15 @@
     <None Include="outlining.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include="grass.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="framebuffer.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="framebuffer.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="shaderClass.h">
