@@ -144,45 +144,40 @@ int main()
 	//运行主函数
 	while (!glfwWindowShouldClose(window))
 	{
-		// Updates counter and times
 		crntTime = glfwGetTime();
 		timeDiff = crntTime - prevTime;
 		counter++;
-
 		if (timeDiff >= 1.0 / 30.0)
 		{
-			// Creates new title
 			std::string FPS = std::to_string((1.0 / timeDiff) * counter);
 			std::string ms = std::to_string((timeDiff / counter) * 1000);
-			std::string newTitle = "YoutubeOpenGL - " + FPS + "FPS / " + ms + "ms";
+			std::string newTitle = "TestFps - " + FPS + "FPS / " + ms + "ms";
 			glfwSetWindowTitle(window, newTitle.c_str());
-
-			// Resets times and counter
 			prevTime = crntTime;
 			counter = 0;
-
-			// Use this if you have disabled VSync
+			//启用操作与帧同步
 			//camera.Inputs(window);
 		}
 
-
-		// Bind the custom framebuffer
+		//背景颜色设置
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-		// Specify the color of the background
+
 		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-		// Clean the back buffer and depth buffer
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		// Enable depth testing since it's disabled when drawing the framebuffer rectangle
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
 		glEnable(GL_DEPTH_TEST);
 
-		// Handles camera inputs (delete this if you have disabled VSync)
+
+		//不启用操作与帧同步
 		camera.Inputs(window);
-		// Updates and exports the camera matrix to the Vertex Shader
 		camera.updateMatrix(45.0f, 0.1f, 100.0f);
 
-
-		// Draw the normal model
-		grass.Draw(shaderProgram, camera);
+		//模型绘制部分
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
+		//model1.Draw(shaderProgram, camera);
+		grass.Draw(grassProgram, camera);
+		ground.Draw(shaderProgram, camera);
 
 
 		// Bind the default framebuffer
@@ -194,13 +189,27 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, framebufferTexture);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
+		//以下是关于外描边的实验代码
 
-		// Swap the back buffer with the front buffer
+		//glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		//glStencilMask(0x00);
+		//glDisable(GL_DEPTH_TEST);
+		//outliningProgram.Activate();
+		//glUniform1f(glGetUniformLocation(outliningProgram.ID, "outlining"), 0.5f);
+		//model1.Draw(outliningProgram, camera);
+		//glStencilMask(0xFF);
+		//glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		//glEnable(GL_DEPTH_TEST);
+
+		GLenum err;
+		while ((err = glGetError()) != GL_NO_ERROR)
+		{
+			std::cerr << "OpenGL error: " << err << std::endl;
+		}
+
 		glfwSwapBuffers(window);
-		// Take care of all GLFW events
 		glfwPollEvents();
 	}
-
 
 
 	shaderProgram.Delete();
