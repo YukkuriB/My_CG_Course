@@ -172,6 +172,8 @@
   <ItemGroup>
     <None Include="default.frag" />
     <None Include="default.vert" />
+    <None Include="flat.frag" />
+    <None Include="flat.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EBO.h" />

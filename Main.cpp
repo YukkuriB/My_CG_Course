@@ -8,6 +8,7 @@
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include"VAO.h"
 #include"VBO.h"
 #include"EBO.h"
@@ -37,7 +38,9 @@ int main()
 	float rotationSpeed = -50.0f;
 	float rotationSpeed2 = -50.0f;
 	float translationSpeed = 0.5f;
+	bool useFlatShading = false;//flat着色器开关
 	glm::vec3 translation(0.0f, 0.0f, 0.0f);
+	glm::vec3 translation2(0.0f, 0.0f, 0.0f);
 
 	float BgColor[4] = { 0.07f, 0.07f, 0.07f, 0.07f }; // 白色
 	// 定义顶点
@@ -56,19 +59,18 @@ int main()
 
 	GLfloat verticesSquare[] = {
 		// 第一个三角形
-		-0.5f, -0.5f, 0.0f, 1.0f, 0.8f, 0.0f, // 左下角 (亮黄色)
+		-0.5f, -0.5f, 0.0f, 0.0f, 0.8f, 0.0f, // 左下角 (亮黄色)
 		 0.5f, -0.5f, 0.0f, 0.2f, 0.2f, 0.0f, // 右下角 (暗黄色)
 		 0.5f,  0.5f, 0.0f, 1.0f, 0.9f, 0.5f, // 右上角 (非常亮的黄色)
 
 		// 第二个三角形
-		 0.5f,  0.5f, 0.0f, 1.0f, 0.9f, 0.0f, // 右上角 (非常亮的黄色)
 		-0.5f,  0.5f, 0.0f, 0.2f, 0.2f, 0.0f, // 左上角 (较暗黄色)
-		-0.5f, -0.5f, 0.0f, 1.0f, 0.8f, 0.5f  // 左下角 (亮黄色)
+
 	};
 
 	GLuint indicesSquare[] = {
 		0, 1, 2, // 第一个三角形
-		3, 4, 5  // 第二个三角形
+		2, 3, 0  // 第二个三角形
 	};
 
 	// 创建窗口，如果窗口出问题就以failed结束
@@ -95,6 +97,7 @@ int main()
 
 
 	Shader shaderProgram("default.vert", "default.frag");
+	Shader shaderFlat("flat.vert", "flat.frag");
 
 
 	VAO VAO1;
@@ -140,15 +143,20 @@ int main()
 	{
 		float timeValue = glfwGetTime();
 		//更新平移向量
-		translation.x += translationSpeed * timeValue;
+		translation.x = sin(timeValue) * translationSpeed;
+		translation2.y = tan(timeValue) * translationSpeed;
+
 
 		float angle = timeValue * glm::radians(rotationSpeed);  // 旋转速度为50度/秒
-		glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 0.0f, 1.0f));
-		glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), translation);
-		glm::mat4 modelMatrix = translationMatrix * rotation;
+		glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 0.0f, 1.0f));
+		glm::mat4 rotationMatrixReverse = glm::rotate(glm::mat4(1.0f), -angle, glm::vec3(0.0f, 0.0f, 1.0f));
 
-		//投影矩阵
-	
+		glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), translation);
+		glm::mat4 modelMatrix = translationMatrix * rotationMatrix;
+
+		glm::mat4 translationMatrix2 = glm::translate(glm::mat4(1.0f), translation2);
+		glm::mat4 modelMatrix2 = translationMatrix2 * rotationMatrixReverse;
+
 
 		//刷新背景
 		glClearColor(0.07f, 0.07f, 0.07f, 0.07f);
@@ -158,12 +166,12 @@ int main()
 	
 
 		shaderProgram.Activate();
-
+		
 		glUniform3fv(glGetUniformLocation(shaderProgram.ID, "triangleColor"), 1, triangleColor);
 
-		//旋转三角形
-		GLuint rotationLoc = glGetUniformLocation(shaderProgram.ID, "rotationMatrix");
-		glUniformMatrix4fv(rotationLoc, 1, GL_FALSE, glm::value_ptr(rotation));
+		//第一个矩阵，旋转三角形
+		GLuint modelLoc = glGetUniformLocation(shaderProgram.ID, "modelMatrix");
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 
 		//绘制三角形
@@ -171,11 +179,17 @@ int main()
 		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 		VAO1.Unbind();
 		//第二个矩阵
-		glm::mat4 reverseMatrix = glm::rotate(glm::mat4(1.0f), -angle, glm::vec3(0.0f, 0.0f, 1.0f));
-		glUniformMatrix4fv(rotationLoc, 1, GL_FALSE, glm::value_ptr(reverseMatrix));
+		if (useFlatShading) {
+			shaderFlat.Activate();
+		}
+		else {
+
+		}
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix2));
 		//绘制方形
 		VAO2.Bind();
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); 
+	
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		VAO2.Unbind();
 
 
@@ -186,6 +200,9 @@ int main()
 		//窗口创建
 		static GLfloat currentColor[3] = { 1.0f, 1.0f, 1.0f };
 		ImGui::Begin("Triangle Color Picker");
+		//flat设置
+		ImGui::Checkbox("Use Flat Shading", &useFlatShading);
+
 		//右键菜单
 		if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
 			ImGui::OpenPopup("Color Context Menu");
@@ -213,18 +230,8 @@ int main()
 			ImGui::EndPopup();
 		}
 		//2更改旋转速度部分
-		ImGui::SliderFloat("Rotation Speed", &rotationSpeed, -10000.0f, 10000.0f); // 范围从0到100
-		//3更改色彩部分
-		if (ImGui::ColorEdit3("Triangle Color", currentColor)) {
-			//如果颜色改变就更新颜色
-			//updateVertexColors(vertices, currentColor, 3); // 更新颜色
-
-			//刷新vbo
-			VBO1.Bind();
-			glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices); //注意使用subdata
-			VBO1.Unbind();
-		}
-		ImGui::Text("Homework C1");
+		ImGui::SliderFloat("Rotation Speed", &rotationSpeed, -50.0f, 50.0f); // 范围从0到100
+		ImGui::Text("Homework C2");
 		ImGui::End();
 		// imgui界面渲染
 		ImGui::Render();
@@ -242,7 +249,7 @@ int main()
 	VBO1.Delete();
 	EBO1.Delete();
 	shaderProgram.Delete();
-
+	shaderFlat.Delete();
 	glfwDestroyWindow(window);
 
 	glfwTerminate();
