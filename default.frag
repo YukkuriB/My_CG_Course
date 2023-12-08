@@ -34,7 +34,11 @@ vec4 pointLight()
 	float specular = specAmount * specularLight;
 
 	float diffuse = max(dot(normal, lightDirection), 0.0f);
-	return (texture(diffuse0, texCoord) * lightColor * (diffuse * inten + ambient) + texture(specular0, texCoord).r * specular * inten) * lightColor;
+	 // 使用固定颜色代替纹理
+    vec3 fixedColor = vec3(1.0, 0.5, 0.2); // 比如橙色
+
+    // 将固定颜色与光照效果相结合
+    return vec4(fixedColor * (diffuse * inten + ambient) + specular * inten, 1.0) * lightColor;
 }
 
 vec4 direcLight()
@@ -80,5 +84,5 @@ vec4 spotLight()
 
 void main()
 {
-	FragColor = direcLight();
+	FragColor = pointLight();
 }
