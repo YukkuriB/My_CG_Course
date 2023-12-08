@@ -85,5 +85,5 @@ vec4 spotLight()
 void main()
 {
 	vec3 normalColor = (Normal + 1.0) * 0.5; // 将法线映射到[0, 1]范围
-    FragColor = vec4(normalColor, 1.0); // 直接使用法线颜色作为输出颜色
+    FragColor = vec4(fixedColor, 1.0); // 直接使用法线颜色作为输出颜色
 }
