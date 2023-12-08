@@ -30,7 +30,8 @@ void OBJModel::LoadFromFile(const char* fileName) {
 			if (StartWith(line, "v "))
 			{
 				Position Pos;
-				sscanf_s(line.c_str(), "v %f %f %f", &Pos.x, &Pos.y, &Pos.z);
+				sscanf_s(line.c_str(), "v %f %f %f", &Pos.y, &Pos.x, &Pos.z); // 交换了 Y 和 Z
+				//Pos.z = -Pos.z; // 这一行翻转Z
 				verticies.push_back(Pos);
 				std::cout << "Vertex: " << Pos.x << ", " << Pos.y << ", " << Pos.z << std::endl;
 			}
