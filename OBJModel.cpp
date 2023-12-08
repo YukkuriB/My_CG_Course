@@ -129,18 +129,22 @@ bool OBJModel::StartWith(std::string& line, const char* text) {
 
 void OBJModel::AddVertexData(int vIdx, int nIdx, const char* mtl,
 	std::vector<Position>& vertices, std::vector<Normal>& normals) {
-
 	if (static_cast<size_t>(vIdx) > 0 && static_cast<size_t>(vIdx) <= vertices.size()) {
 		Position p = vertices[static_cast<size_t>(vIdx) - 1];
-		Normal n = { 0.0f, 0.0f, 0.0f }; // 默认法线
+		Normal n; // 默认法线
 
-		// 如果有有效的法线索引，则使用它
+		// 检查法线索引是否有效
 		if (static_cast<size_t>(nIdx) > 0 && static_cast<size_t>(nIdx) <= normals.size()) {
 			n = normals[static_cast<size_t>(nIdx) - 1];
+		}
+		else {
+			// 未提供法线索引或法线索引无效
+			std::cerr << "Invalid normal index: vIdx=" << nIdx << std::endl;
 		}
 
 		Color c = mMaterialMap[mtl];
 
+		// 存储顶点数据
 		mVertexData.push_back(p.x);
 		mVertexData.push_back(p.y);
 		mVertexData.push_back(p.z);

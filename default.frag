@@ -15,7 +15,7 @@ uniform vec4 lightColor;
 uniform vec3 lightPos;
 uniform vec3 camPos;
  // 使用固定颜色代替纹理
-    vec3 fixedColor = vec3(1.0, 0.5, 0.2); // 比如橙色
+uniform vec3 fixedColor = vec3(1.0, 0.5, 0.2); // 比如橙色
 vec4 pointLight()
 {
 	vec3 lightVec = lightPos - crntPos;
@@ -56,7 +56,7 @@ vec4 direcLight()
 	float specular = specAmount * specularLight;
 
 	float diffuse = max(dot(normal, lightDirection), 0.0f);
-	return ( lightColor * (diffuse + ambient) + texture(specular0, texCoord).r * specular) * lightColor;
+	return (vec4(fixedColor, 1.0) * lightColor * (diffuse + ambient) + texture(specular0, texCoord).r + specular) * lightColor ;
 }
 
 vec4 spotLight()
@@ -85,5 +85,5 @@ vec4 spotLight()
 void main()
 {
 	vec3 normalColor = (Normal + 1.0) * 0.5; // 将法线映射到[0, 1]范围
-    FragColor = vec4(normalColor, 1.0); // 直接使用法线颜色作为输出颜色
+    FragColor = direcLight(); // 用dirlight渲染
 }
