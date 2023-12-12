@@ -1,161 +1,388 @@
-#include "OBJModel.h"
-#include <iostream>
-#include <fstream>
-OBJModel::OBJModel() {
+//	May Ang
+//	mang@ucsc.edu
+//	CS 161 - Animation & Visualization
+//	Final Project - Rain/Hail/Snow Simulation
+
+//source: https://classes.soe.ucsc.edu/cmps161/Winter09/projects/mang/finalproject.html
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <GL/glut.h>
+#include <GL/gl.h>
+
+
+#define MAX_PARTICLES 1000
+#define WCX		640
+#define WCY		480
+#define RAIN	0
+#define SNOW	1
+#define	HAIL	2
+
+
+float slowdown = 2.0;
+float velocity = 0.0;
+float zoom = -40.0;
+float pan = 0.0;
+float tilt = 0.0;
+float hailsize = 0.1;
+
+int loop;
+int fall;
+
+//floor colors
+float r = 0.0;
+float g = 1.0;
+float b = 0.0;
+float ground_points[21][21][3];
+float ground_colors[21][21][4];
+float accum = -10.0;
+
+typedef struct {
+  // Life
+  bool alive;	// is the particle alive?
+  float life;	// particle lifespan
+  float fade; // decay
+  // color
+  float red;
+  float green;
+  float blue;
+  // Position/direction
+  float xpos;
+  float ypos;
+  float zpos;
+  // Velocity/Direction, only goes down in y dir
+  float vel;
+  // Gravity
+  float gravity;
+}particles;
+
+// Paticle System
+particles par_sys[MAX_PARTICLES];
+
+void normal_keys(unsigned char key, int x, int y) {
+  if (key == 'r') { // Rain
+    fall = RAIN;
+    glutPostRedisplay();
+  }
+  if (key == 'h') { // Hail
+    fall = HAIL;
+    glutPostRedisplay();
+  }
+  if (key == 's') { // Snow
+    fall = SNOW;
+    glutPostRedisplay();
+  }
+  if (key == '=') { //really '+' - make hail bigger
+    hailsize += 0.01;
+  }
+  if (key == '-') { // make hail smaller
+    if (hailsize > 0.1) hailsize -= 0.01;
+  }
+  if (key == ',') { // really '<' slow down
+    if (slowdown > 4.0) slowdown += 0.01;
+  }
+  if (key == '.') { // really '>' speed up
+    if (slowdown > 1.0) slowdown -= 0.01;
+  }
+  if (key == 'q') { // QUIT
+    exit(0);
+  }
+}
+
+void special_keys(int key, int x, int y) {
+  if (key == GLUT_KEY_UP) {
+    zoom += 1.0;
+  }
+  if (key == GLUT_KEY_DOWN) {
+    zoom -= 1.0;
+  }
+  if (key == GLUT_KEY_RIGHT) {
+    pan += 1.0;
+  }
+  if (key == GLUT_KEY_LEFT) {
+    pan -= 1.0;
+  }
+  if (key == GLUT_KEY_PAGE_UP) {
+    tilt -= 1.0;
+  }
+  if (key == GLUT_KEY_PAGE_DOWN) {
+    tilt += 1.0;
+  }
+}
+
+
+// Initialize/Reset Particles - give them their attributes
+void initParticles(int i) {
+    par_sys[i].alive = true;
+    par_sys[i].life = 1.0;
+    par_sys[i].fade = float(rand()%100)/1000.0f+0.003f;
+
+    par_sys[i].xpos = (float) (rand() % 21) - 10;
+    par_sys[i].ypos = 10.0;
+    par_sys[i].zpos = (float) (rand() % 21) - 10;
+
+    par_sys[i].red = 0.5;
+    par_sys[i].green = 0.5;
+    par_sys[i].blue = 1.0;
+
+    par_sys[i].vel = velocity;
+    par_sys[i].gravity = -0.8;//-0.8;
 
 }
 
-OBJModel::~OBJModel() {
+void init( ) {
+  int x, z;
 
+    glShadeModel(GL_SMOOTH);
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClearDepth(1.0);
+    glEnable(GL_DEPTH_TEST);
+
+  // Ground Verticies
+    // Ground Colors
+    for (z = 0; z < 21; z++) {
+      for (x = 0; x < 21; x++) {
+        ground_points[x][z][0] = x - 10.0;
+        ground_points[x][z][1] = accum;
+        ground_points[x][z][2] = z - 10.0;
+
+        ground_colors[z][x][0] = r; // red value
+        ground_colors[z][x][1] = g; // green value
+        ground_colors[z][x][2] = b; // blue value
+        ground_colors[z][x][3] = 0.0; // acummulation factor
+      }
+    }
+
+    // Initialize particles
+    for (loop = 0; loop < MAX_PARTICLES; loop++) {
+        initParticles(loop);
+    }
 }
 
-void OBJModel::LoadFromFile(const char* fileName) {
-	std::vector<Position> verticies;
-	std::vector<Normal> normals;
+// For Rain
+void drawRain() {
+  float x, y, z;
+  for (loop = 0; loop < MAX_PARTICLES; loop=loop+2) {
+    if (par_sys[loop].alive == true) {
+      x = par_sys[loop].xpos;
+      y = par_sys[loop].ypos;
+      z = par_sys[loop].zpos + zoom;
 
-	std::ifstream file(fileName);
-	if (file)
-	{
-		char currentMtlName[100];
-		std::string line;
-		while (std::getline(file, line))
-		{
-			if (StartWith(line, "mtllib")) {
-				char mtlFileName[100];
-				(void)sscanf_s(line.c_str(), "mtllib %s", mtlFileName, static_cast<unsigned int>(_countof(mtlFileName) - 1));
+      // Draw particles
+      glColor3f(0.5, 0.5, 1.0);
+      glBegin(GL_LINES);
+        glVertex3f(x, y, z);
+        glVertex3f(x, y+0.5, z);
+      glEnd();
 
-				// 使用 sizeof(mtlFileName) - 1 来传递缓冲区大小，保留一个字符用于 '\0'
-				LoadMaterialFile(mtlFileName);
-			}
-			if (StartWith(line, "v "))
-			{
-				Position Pos;
-				sscanf_s(line.c_str(), "v %f %f %f", &Pos.y, &Pos.x, &Pos.z); // 交换了 Y 和 Z
-				//Pos.z = -Pos.z; // 这一行翻转Z
-				verticies.push_back(Pos);
-				std::cout << "Vertex: " << Pos.x << ", " << Pos.y << ", " << Pos.z << std::endl;
-			}
-			if (StartWith(line, "vn ")) 
-			{
-				Normal n;
-				sscanf_s(line.c_str(), "vn %f %f %f", &n.x, &n.y, &n.z);
-				normals.push_back(n);
-				std::cout << "Normal: " << n.x << ", " << n.y << ", " << n.z << std::endl;
-			}
-			if (StartWith(line, "f ")) {
-				int v1, v2, v3;
-				int n1, n2, n3;
-				if (sscanf_s(line.c_str(), "f %d %d %d", &v1, &v2, &v3) == 3) {
-					// 解析到只有顶点索引的面
-					AddVertexData(v1, -1, currentMtlName, verticies, normals);
-					AddVertexData(v2, -1, currentMtlName, verticies, normals);
-					AddVertexData(v3, -1, currentMtlName, verticies, normals);
-				}
-				else if (sscanf_s(line.c_str(), "f %d//%d %d//%d %d//%d", &v1, &n1, &v2, &n2, &v3, &n3) == 6) {
-					// 解析到有顶点和法线索引的面
-					AddVertexData(v1, n1, currentMtlName, verticies, normals);
-					AddVertexData(v2, n2, currentMtlName, verticies, normals);
-					AddVertexData(v3, n3, currentMtlName, verticies, normals);
-				}
-				else {
-					std::cerr << "Unsupported face format: " << line << std::endl;
-				}
-			}
-		}
-		std::cout << "Finished loading OBJ. Vertices: " << verticies.size() << ", Normals: " << normals.size() << std::endl;
-	}
-	else
-	{
-		std::cout << "OBJ file loading failed" << std::endl;
-	}
+      // Update values
+      //Move
+      // Adjust slowdown for speed!
+      par_sys[loop].ypos += par_sys[loop].vel / (slowdown*1000);
+      par_sys[loop].vel += par_sys[loop].gravity;
+      // Decay
+      par_sys[loop].life -= par_sys[loop].fade;
+
+      if (par_sys[loop].ypos <= -10) {
+        par_sys[loop].life = -1.0;
+      }
+      //Revive
+      if (par_sys[loop].life < 0.0) {
+        initParticles(loop);
+      }
+    }
+  }
 }
 
-std::vector<float> OBJModel::GetVertexData() {
-	return mVertexData;
+// For Hail
+void drawHail() {
+  float x, y, z;
+
+  for (loop = 0; loop < MAX_PARTICLES; loop=loop+2) {
+    if (par_sys[loop].alive == true) {
+      x = par_sys[loop].xpos;
+      y = par_sys[loop].ypos;
+      z = par_sys[loop].zpos + zoom;
+
+      // Draw particles
+      glColor3f(0.8, 0.8, 0.9);
+      glBegin(GL_QUADS);
+        // Front
+        glVertex3f(x-hailsize, y-hailsize, z+hailsize); // lower left
+        glVertex3f(x-hailsize, y+hailsize, z+hailsize); // upper left
+        glVertex3f(x+hailsize, y+hailsize, z+hailsize); // upper right
+        glVertex3f(x+hailsize, y-hailsize, z+hailsize); // lower left
+        //Left
+        glVertex3f(x-hailsize, y-hailsize, z+hailsize);
+        glVertex3f(x-hailsize, y-hailsize, z-hailsize);
+        glVertex3f(x-hailsize, y+hailsize, z-hailsize);
+        glVertex3f(x-hailsize, y+hailsize, z+hailsize);
+        // Back
+        glVertex3f(x-hailsize, y-hailsize, z-hailsize);
+        glVertex3f(x-hailsize, y+hailsize, z-hailsize);
+        glVertex3f(x+hailsize, y+hailsize, z-hailsize);
+        glVertex3f(x+hailsize, y-hailsize, z-hailsize);
+        //Right
+        glVertex3f(x+hailsize, y+hailsize, z+hailsize);
+        glVertex3f(x+hailsize, y+hailsize, z-hailsize);
+        glVertex3f(x+hailsize, y-hailsize, z-hailsize);
+        glVertex3f(x+hailsize, y-hailsize, z+hailsize);
+        //Top
+        glVertex3f(x-hailsize, y+hailsize, z+hailsize);
+        glVertex3f(x-hailsize, y+hailsize, z-hailsize);
+        glVertex3f(x+hailsize, y+hailsize, z-hailsize);
+        glVertex3f(x+hailsize, y+hailsize, z+hailsize);
+        //Bottom
+        glVertex3f(x-hailsize, y-hailsize, z+hailsize);
+        glVertex3f(x-hailsize, y-hailsize, z-hailsize);
+        glVertex3f(x+hailsize, y-hailsize, z-hailsize);
+        glVertex3f(x+hailsize, y-hailsize, z+hailsize);
+      glEnd();
+
+      // Update values
+      //Move
+      if (par_sys[loop].ypos <= -10) {
+        par_sys[loop].vel = par_sys[loop].vel * -1.0;
+      }
+      par_sys[loop].ypos += par_sys[loop].vel / (slowdown*1000); // * 1000
+      par_sys[loop].vel += par_sys[loop].gravity;
+
+      // Decay
+      par_sys[loop].life -= par_sys[loop].fade;
+
+      //Revive
+      if (par_sys[loop].life < 0.0) {
+        initParticles(loop);
+      }
+    }
+  }
 }
 
-int OBJModel::GetVertexCount() {
-	size_t count = mVertexData.size() / 9;
-	if (count > static_cast<size_t>(std::numeric_limits<int>::max())) {
-		// 处理或报告溢出
-		std::cerr << "Warning: Vertex count exceeds the limit of int type." << std::endl;
-		return std::numeric_limits<int>::max();
-	}
-	return static_cast<int>(count);
-}
-void OBJModel::LoadMaterialFile(const char* fileName) {
-	std::ifstream file(fileName);
-		if (file) 
-		{
-			std::string line;
-			while (std::getline(file, line)) 
-			{
-				char mtlName[100] = {};
-				if (StartWith(line, "newmtl"))
-				{
-					(void)sscanf_s(line.c_str(), "newmtl %s", mtlName, static_cast<unsigned int>(_countof(mtlName) - 1));
+// For Snow
+void drawSnow() {
+  float x, y, z;
+  for (loop = 0; loop < MAX_PARTICLES; loop=loop+2) {
+    if (par_sys[loop].alive == true) {
+      x = par_sys[loop].xpos;
+      y = par_sys[loop].ypos;
+      z = par_sys[loop].zpos + zoom;
 
+      // Draw particles
+      glColor3f(1.0, 1.0, 1.0);
+      glPushMatrix();
+      glTranslatef(x, y, z);
+      glutSolidSphere(0.2, 16, 16);
+      glPopMatrix();
 
-					mMaterialMap[mtlName] = Color();
-				}
-				if (StartWith(line, "kd"))
-				{
-					Color& color = mMaterialMap[mtlName];
-					sscanf_s(line.c_str(), "Kd %f %f %f", &color.r, &color.g, &color.b);
-				}
-			}
-		}
-		else
-		{
-			std::cout << "Material file loading filed" << std::endl;
-		}
+      // Update values
+      //Move
+      par_sys[loop].ypos += par_sys[loop].vel / (slowdown*1000);
+      par_sys[loop].vel += par_sys[loop].gravity;
+      // Decay
+      par_sys[loop].life -= par_sys[loop].fade;
 
-}
+      if (par_sys[loop].ypos <= -10) {
+        int zi = z - zoom + 10;
+        int xi = x + 10;
+        ground_colors[zi][xi][0] = 1.0;
+        ground_colors[zi][xi][2] = 1.0;
+        ground_colors[zi][xi][3] += 1.0;
+        if (ground_colors[zi][xi][3] > 1.0) {
+          ground_points[xi][zi][1] += 0.1;
+        }
+        par_sys[loop].life = -1.0;
+      }
 
-
-bool OBJModel::StartWith(std::string& line, const char* text) {
-	size_t textLen = strlen(text);
-	if (line.size() < textLen) {
-		return false;
-	}
-	for (size_t i = 0; i < textLen; i++)
-	{
-		if (line[i] == text[i]) continue;
-		else return false;
-		
-	}
-	return true;
+      //Revive
+      if (par_sys[loop].life < 0.0) {
+        initParticles(loop);
+      }
+    }
+  }
 }
 
-void OBJModel::AddVertexData(int vIdx, int nIdx, const char* mtl,
-	std::vector<Position>& vertices, std::vector<Normal>& normals) {
-	if (static_cast<size_t>(vIdx) > 0 && static_cast<size_t>(vIdx) <= vertices.size()) {
-		Position p = vertices[static_cast<size_t>(vIdx) - 1];
-		Normal n; // 默认法线
+// Draw Particles
+void drawScene( ) {
+  int i, j;
+  float x, y, z;
 
-		// 检查法线索引是否有效
-		if (static_cast<size_t>(nIdx) > 0 && static_cast<size_t>(nIdx) <= normals.size()) {
-			n = normals[static_cast<size_t>(nIdx) - 1];
-		}
-		else {
-			// 未提供法线索引或法线索引无效
-			std::cerr << "Invalid normal index: vIdx=" << nIdx << std::endl;
-		}
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glMatrixMode(GL_MODELVIEW);
 
-		Color c = mMaterialMap[mtl];
+  glLoadIdentity();
 
-		// 存储顶点数据
-		mVertexData.push_back(p.x);
-		mVertexData.push_back(p.y);
-		mVertexData.push_back(p.z);
-		mVertexData.push_back(c.r);
-		mVertexData.push_back(c.g);
-		mVertexData.push_back(c.b);
-		mVertexData.push_back(n.x);
-		mVertexData.push_back(n.y);
-		mVertexData.push_back(n.z);
-	}
-	else {
-		std::cerr << "Invalid vertex index: vIdx=" << vIdx << std::endl;
-	}
+
+  glRotatef(pan, 0.0, 1.0, 0.0);
+  glRotatef(tilt, 1.0, 0.0, 0.0);
+
+  // GROUND?!
+  glColor3f(r, g, b);
+  glBegin(GL_QUADS);
+    // along z - y const
+    for (i = -10; i+1 < 11; i++) {
+      // along x - y const
+      for (j = -10; j+1 < 11; j++) {
+        glColor3fv(ground_colors[i+10][j+10]);
+        glVertex3f(ground_points[j+10][i+10][0],
+              ground_points[j+10][i+10][1],
+              ground_points[j+10][i+10][2] + zoom);
+        glColor3fv(ground_colors[i+10][j+1+10]);
+        glVertex3f(ground_points[j+1+10][i+10][0],
+              ground_points[j+1+10][i+10][1],
+              ground_points[j+1+10][i+10][2] + zoom);
+        glColor3fv(ground_colors[i+1+10][j+1+10]);
+        glVertex3f(ground_points[j+1+10][i+1+10][0],
+              ground_points[j+1+10][i+1+10][1],
+              ground_points[j+1+10][i+1+10][2] + zoom);
+        glColor3fv(ground_colors[i+1+10][j+10]);
+        glVertex3f(ground_points[j+10][i+1+10][0],
+              ground_points[j+10][i+1+10][1],
+              ground_points[j+10][i+1+10][2] + zoom);
+      }
+
+    }
+  glEnd();
+  // Which Particles
+  if (fall == RAIN) {
+    drawRain();
+  }else if (fall == HAIL) {
+    drawHail();
+  }else if (fall == SNOW) {
+    drawSnow();
+  }
+
+  glutSwapBuffers();
+}
+
+void reshape(int w, int h) {
+    if (h == 0) h = 1;
+
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+    gluPerspective(45, (float) w / (float) h, .1, 200);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+void idle ( ) {
+  glutPostRedisplay();
+}
+
+int main (int argc, char** argv) {
+  glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_DEPTH | GLUT_RGB | GLUT_DOUBLE);
+  glutInitWindowSize(WCX, WCY);
+  glutCreateWindow("CMPS 161 - Final Project");
+  init();
+  glutDisplayFunc(drawScene);
+  glutReshapeFunc(reshape);
+  glutKeyboardFunc(normal_keys);
+  glutSpecialFunc(special_keys);
+  glutIdleFunc(idle);
+  glutMainLoop();
+  return 0;
 }
